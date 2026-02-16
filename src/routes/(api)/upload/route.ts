@@ -1,4 +1,4 @@
-import { uploadFile } from "@/services/onedrive";
+import { uploadFileStream } from "@/services/onedrive";
 import { createFileRoute } from "@tanstack/react-router";
 import { kysely } from "@/lib/kysely";
 import { uploadToken } from "@/utils/env";
@@ -19,13 +19,37 @@ export const Route = createFileRoute("/(api)/upload")({
           );
         }
 
-        const formData = await request.formData();
-        const file = formData.get("file") as File;
+        if (!request.body) {
+          return Response.json(
+            { error: "Request body is empty" },
+            { status: 400 },
+          );
+        }
 
-        const result = await uploadFile(
-          Buffer.from(await file.arrayBuffer()),
-          file.name,
-        );
+        const filenameHeader = request.headers.get("x-file-name");
+        const filename = filenameHeader
+          ? decodeURIComponent(filenameHeader)
+          : `upload-${Date.now()}`;
+        const sizeHeader = request.headers.get("x-file-size");
+        const contentLengthHeader = request.headers.get("content-length");
+        const fileSize = Number(sizeHeader || contentLengthHeader || 0);
+
+        if (!fileSize || Number.isNaN(fileSize) || fileSize <= 0) {
+          return Response.json(
+            {
+              error:
+                "Missing or invalid file size (x-file-size/content-length)",
+            },
+            { status: 400 },
+          );
+        }
+
+        // console.info(
+        //   `[upload] stream request start: name=${filename}, size=${fileSize}`,
+        // );
+
+        const result: Awaited<ReturnType<typeof uploadFileStream>> =
+          await uploadFileStream(request.body, fileSize, filename);
 
         const inserted = await kysely
           .insertInto("files")

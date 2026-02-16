@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { formatError } from "@/utils/fmt";
-import { fetchWithRetry } from "@/utils/retry";
+import { fetchWithRetry, retry } from "@/utils/retry";
 
 interface MicrosoftAuthenticationResponse {
   token_type: string;
@@ -51,6 +51,20 @@ interface MicrosoftGraphErrorResponse {
 
     innerError?: any;
   };
+}
+
+interface UploadSessionResponse {
+  uploadUrl?: string;
+}
+
+class UploadChunkError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "UploadChunkError";
+    this.status = status;
+  }
 }
 
 export class OnedriveService {
@@ -161,9 +175,7 @@ export class OnedriveService {
         throw new Error("Not a file");
       }
 
-      let downloadUrl =
-        fileInfo["@microsoft.graph.downloadUrl"] ||
-        fileInfo.content?.downloadUrl;
+      let downloadUrl = fileInfo["@microsoft.graph.downloadUrl"];
 
       if (!downloadUrl) {
         throw new Error("Download URL not found");
@@ -228,5 +240,160 @@ export class OnedriveService {
     } catch (err) {
       throw new Error(formatError(err));
     }
+  }
+
+  private async createUploadSession(uploadPath: string): Promise<string> {
+    await this.ensureValidToken();
+    const url = `${this.tenantUrl}:${encodeURIComponent(uploadPath)}:/createUploadSession`;
+
+    const response = await fetchWithRetry(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.msAuth?.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        item: {
+          "@microsoft.graph.conflictBehavior": "rename",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = (await response
+        .json()
+        .catch(() => null)) as MicrosoftGraphErrorResponse | null;
+
+      if (
+        errorData?.error?.code === "InvalidAuthenticationToken" ||
+        response.status === 401
+      ) {
+        await this.auth();
+        return this.createUploadSession(uploadPath);
+      }
+
+      const message = JSON.stringify(errorData) || (await response.text());
+      throw new Error(`Failed to create upload session: ${message}`);
+    }
+
+    const session = (await response.json()) as UploadSessionResponse;
+    if (!session.uploadUrl) {
+      throw new Error("Upload URL not found in upload session response");
+    }
+    return session.uploadUrl;
+  }
+
+  public async uploadReadableStream(
+    fileStream: ReadableStream<Uint8Array>,
+    filename: string,
+    fileSize: number,
+  ): Promise<OneDriveFile> {
+    if (!fileSize || fileSize <= 0) {
+      throw new Error("Invalid file size");
+    }
+
+    const uploadPath = `${this.config.storagePath}/${filename}`;
+    const uploadUrl = await this.createUploadSession(uploadPath);
+    // OneDrive requires chunk size to be a multiple of 320 KiB.
+    const chunkSize = 10 * 320 * 1024;
+    // const totalChunks = Math.ceil(fileSize / chunkSize);
+    let uploadedFile: OneDriveFile | null = null;
+    // let uploadedBytes = 0;
+    let offset = 0;
+    let pending = new Uint8Array(0);
+
+    // console.info(
+    //   `[onedrive] upload started(stream): name=${filename}, size=${fileSize}, chunks=${totalChunks}`,
+    // );
+
+    const flushChunk = async (start: number, chunk: Uint8Array) => {
+      const end = start + chunk.byteLength - 1;
+      const response = await retry(
+        async () => {
+          const res = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: {
+              "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+              "Content-Type": "application/octet-stream",
+            },
+            body: chunk,
+          });
+
+          if (res.status === 429 || (res.status >= 500 && res.status <= 504)) {
+            const message = await res.text();
+            throw new UploadChunkError(
+              message || "Temporary upload error",
+              res.status,
+            );
+          }
+
+          if (![200, 201, 202].includes(res.status)) {
+            const message = await res.text();
+            throw new Error(
+              `Failed to upload chunk (${start}-${end}): ${message || res.statusText}`,
+            );
+          }
+
+          return res;
+        },
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          retryCondition: (error) =>
+            error instanceof TypeError ||
+            (error instanceof UploadChunkError &&
+              (error.status === 429 ||
+                (error.status >= 500 && error.status <= 504))),
+        },
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        uploadedFile = (await response.json()) as OneDriveFile;
+      }
+
+      // uploadedBytes = end + 1;
+      // const percent = ((uploadedBytes / fileSize) * 100).toFixed(2);
+      // const chunkIndex = Math.floor(start / chunkSize) + 1;
+      // console.info(
+      //   `[onedrive] upload progress(stream): ${percent}% (${uploadedBytes}/${fileSize}) chunk=${chunkIndex}/${totalChunks}`,
+      // );
+    };
+
+    const reader = fileStream.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value || value.byteLength === 0) continue;
+
+        const merged = new Uint8Array(pending.byteLength + value.byteLength);
+        merged.set(pending);
+        merged.set(value, pending.byteLength);
+        pending = merged;
+
+        while (pending.byteLength >= chunkSize) {
+          const chunk = pending.slice(0, chunkSize);
+          pending = pending.slice(chunkSize);
+          await flushChunk(offset, chunk);
+          offset += chunk.byteLength;
+        }
+      }
+
+      if (pending.byteLength > 0) {
+        await flushChunk(offset, pending);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    // console.info(
+    //   `[onedrive] upload completed(stream): name=${filename}, uploaded=${uploadedBytes}/${fileSize}`,
+    // );
+
+    if (uploadedFile) {
+      return uploadedFile;
+    }
+
+    return this.getFile(filename);
   }
 }
