@@ -15,6 +15,8 @@ import { Route as apiFoldersRouteRouteImport } from './routes/(api)/folders/rout
 import { Route as apiCacheRouteRouteImport } from './routes/(api)/cache/route'
 import { Route as apiUploadInitRouteImport } from './routes/(api)/upload/init'
 import { Route as apiUploadChunkRouteImport } from './routes/(api)/upload/chunk'
+import { Route as apiCacheInitRouteImport } from './routes/(api)/cache/init'
+import { Route as apiCacheChunkRouteImport } from './routes/(api)/cache/chunk'
 import { Route as apiCacheKeyRouteImport } from './routes/(api)/cache/$key'
 import { Route as apiBinIdRouteImport } from './routes/(api)/bin/$id'
 
@@ -48,6 +50,16 @@ const apiUploadChunkRoute = apiUploadChunkRouteImport.update({
   path: '/chunk',
   getParentRoute: () => apiUploadRouteRoute,
 } as any)
+const apiCacheInitRoute = apiCacheInitRouteImport.update({
+  id: '/init',
+  path: '/init',
+  getParentRoute: () => apiCacheRouteRoute,
+} as any)
+const apiCacheChunkRoute = apiCacheChunkRouteImport.update({
+  id: '/chunk',
+  path: '/chunk',
+  getParentRoute: () => apiCacheRouteRoute,
+} as any)
 const apiCacheKeyRoute = apiCacheKeyRouteImport.update({
   id: '/$key',
   path: '/$key',
@@ -66,6 +78,8 @@ export interface FileRoutesByFullPath {
   '/upload': typeof apiUploadRouteRouteWithChildren
   '/bin/$id': typeof apiBinIdRoute
   '/cache/$key': typeof apiCacheKeyRoute
+  '/cache/chunk': typeof apiCacheChunkRoute
+  '/cache/init': typeof apiCacheInitRoute
   '/upload/chunk': typeof apiUploadChunkRoute
   '/upload/init': typeof apiUploadInitRoute
 }
@@ -76,6 +90,8 @@ export interface FileRoutesByTo {
   '/upload': typeof apiUploadRouteRouteWithChildren
   '/bin/$id': typeof apiBinIdRoute
   '/cache/$key': typeof apiCacheKeyRoute
+  '/cache/chunk': typeof apiCacheChunkRoute
+  '/cache/init': typeof apiCacheInitRoute
   '/upload/chunk': typeof apiUploadChunkRoute
   '/upload/init': typeof apiUploadInitRoute
 }
@@ -87,6 +103,8 @@ export interface FileRoutesById {
   '/(api)/upload': typeof apiUploadRouteRouteWithChildren
   '/(api)/bin/$id': typeof apiBinIdRoute
   '/(api)/cache/$key': typeof apiCacheKeyRoute
+  '/(api)/cache/chunk': typeof apiCacheChunkRoute
+  '/(api)/cache/init': typeof apiCacheInitRoute
   '/(api)/upload/chunk': typeof apiUploadChunkRoute
   '/(api)/upload/init': typeof apiUploadInitRoute
 }
@@ -99,6 +117,8 @@ export interface FileRouteTypes {
     | '/upload'
     | '/bin/$id'
     | '/cache/$key'
+    | '/cache/chunk'
+    | '/cache/init'
     | '/upload/chunk'
     | '/upload/init'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +129,8 @@ export interface FileRouteTypes {
     | '/upload'
     | '/bin/$id'
     | '/cache/$key'
+    | '/cache/chunk'
+    | '/cache/init'
     | '/upload/chunk'
     | '/upload/init'
   id:
@@ -119,6 +141,8 @@ export interface FileRouteTypes {
     | '/(api)/upload'
     | '/(api)/bin/$id'
     | '/(api)/cache/$key'
+    | '/(api)/cache/chunk'
+    | '/(api)/cache/init'
     | '/(api)/upload/chunk'
     | '/(api)/upload/init'
   fileRoutesById: FileRoutesById
@@ -175,6 +199,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof apiUploadChunkRouteImport
       parentRoute: typeof apiUploadRouteRoute
     }
+    '/(api)/cache/init': {
+      id: '/(api)/cache/init'
+      path: '/init'
+      fullPath: '/cache/init'
+      preLoaderRoute: typeof apiCacheInitRouteImport
+      parentRoute: typeof apiCacheRouteRoute
+    }
+    '/(api)/cache/chunk': {
+      id: '/(api)/cache/chunk'
+      path: '/chunk'
+      fullPath: '/cache/chunk'
+      preLoaderRoute: typeof apiCacheChunkRouteImport
+      parentRoute: typeof apiCacheRouteRoute
+    }
     '/(api)/cache/$key': {
       id: '/(api)/cache/$key'
       path: '/$key'
@@ -194,10 +232,14 @@ declare module '@tanstack/react-router' {
 
 interface apiCacheRouteRouteChildren {
   apiCacheKeyRoute: typeof apiCacheKeyRoute
+  apiCacheChunkRoute: typeof apiCacheChunkRoute
+  apiCacheInitRoute: typeof apiCacheInitRoute
 }
 
 const apiCacheRouteRouteChildren: apiCacheRouteRouteChildren = {
   apiCacheKeyRoute: apiCacheKeyRoute,
+  apiCacheChunkRoute: apiCacheChunkRoute,
+  apiCacheInitRoute: apiCacheInitRoute,
 }
 
 const apiCacheRouteRouteWithChildren = apiCacheRouteRoute._addFileChildren(

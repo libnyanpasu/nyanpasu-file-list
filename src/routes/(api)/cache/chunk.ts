@@ -6,10 +6,9 @@ import {
   getUploadTokenSecret,
   requireUploadAuthorization,
 } from "@/utils/upload-auth";
-import { getOrCreateFolderByPath } from "@/query/folders";
 import { parseContentRange } from "@/utils/content-range";
 
-export const Route = createFileRoute("/(api)/upload/chunk")({
+export const Route = createFileRoute("/(api)/cache/chunk")({
   server: {
     handlers: {
       POST: async ({ request }) => {
@@ -85,35 +84,28 @@ export const Route = createFileRoute("/(api)/upload/chunk")({
           });
         }
 
-        let folderId: string | null = null;
-        if (session.folderPath) {
-          folderId = await getOrCreateFolderByPath(session.folderPath);
-        }
-
-        let fileRow;
-        try {
-          fileRow = await kysely
-            .insertInto("files")
-            .values({
-              id: session.fileId,
-              file_name: result.file.name,
-              file_size: result.file.size,
-              mime_type: result.file.file?.mimeType || session.mimeType,
-              folder_id: folderId,
-            })
-            .returningAll()
-            .executeTakeFirstOrThrow();
-        } catch {
-          fileRow = await kysely
-            .selectFrom("files")
-            .selectAll()
-            .where("id", "=", session.fileId)
-            .executeTakeFirstOrThrow();
-        }
+        // Upsert DB record with hidden=1
+        await kysely
+          .insertInto("files")
+          .values({
+            id: session.fileId,
+            file_name: session.fileId,
+            file_size: result.file.size,
+            mime_type: "application/octet-stream",
+            hidden: 1,
+          })
+          .onConflict((oc) =>
+            oc.column("id").doUpdateSet({
+              file_size: result.file!.size,
+              updated_at: new Date().toISOString(),
+            }),
+          )
+          .execute();
 
         return Response.json({
           done: true,
-          file: fileRow,
+          key: session.fileId,
+          size: result.file.size,
         });
       },
     },

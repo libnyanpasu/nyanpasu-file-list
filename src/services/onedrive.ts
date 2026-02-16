@@ -51,6 +51,12 @@ export const uploadChunkToSession = async (
   return client.uploadChunkToSession(uploadUrl, chunk, start, end, totalSize);
 };
 
+export const createCacheUploadSession = async (key: string) => {
+  const client = await getOnedriveClient();
+  const basePath = requireCacheStoragePath();
+  return client.createUploadSessionWithBasePath(key, basePath);
+};
+
 export const getFile = async (path: string) => {
   const client = await getOnedriveClient();
 

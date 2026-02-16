@@ -318,6 +318,14 @@ export class OnedriveService {
     return this.createUploadSession(uploadPath);
   }
 
+  public async createUploadSessionWithBasePath(
+    filename: string,
+    basePath: string,
+  ): Promise<string> {
+    const uploadPath = `${basePath}/${filename}`;
+    return this.createUploadSession(uploadPath);
+  }
+
   public async uploadChunkToSession(
     uploadUrl: string,
     chunk: Uint8Array,
