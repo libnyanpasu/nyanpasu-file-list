@@ -7,6 +7,7 @@ export const FilesSchema = z.object({
   file_size: z.number().default(0),
   mime_type: z.string().nullable(),
   hidden: z.number().default(0),
+  folder_id: z.string().nullable().default(null),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -19,10 +20,30 @@ export interface FilesTable {
   file_size: Generated<number>;
   mime_type: string | null;
   hidden: Generated<number>;
+  folder_id: string | null;
+  created_at: Generated<string>;
+  updated_at: Generated<string>;
+}
+
+export const FoldersSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  parent_id: z.string().nullable().default(null),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export type Folders = z.infer<typeof FoldersSchema>;
+
+export interface FoldersTable {
+  id: string;
+  name: string;
+  parent_id: string | null;
   created_at: Generated<string>;
   updated_at: Generated<string>;
 }
 
 export interface Database {
   files: FilesTable;
+  folders: FoldersTable;
 }

@@ -6,6 +6,7 @@ export interface UploadSessionTokenPayload {
   filename: string;
   mimeType: string | null;
   fileId: string;
+  folderPath: string | null;
   exp: number;
 }
 

@@ -44,11 +44,13 @@ export const Route = createFileRoute("/(api)/upload/init")({
             filename?: string;
             fileSize?: number;
             mimeType?: string;
+            folderPath?: string;
           } | null;
 
           const filename = body?.filename?.trim();
           const fileSize = Number(body?.fileSize || 0);
           const mimeType = body?.mimeType?.trim() || null;
+          const folderPath = body?.folderPath?.trim() || null;
 
           if (!filename) {
             return Response.json(
@@ -73,6 +75,7 @@ export const Route = createFileRoute("/(api)/upload/init")({
               filename,
               mimeType,
               fileId: crypto.randomUUID(),
+              folderPath,
               exp: expiresAt,
             },
             secret,

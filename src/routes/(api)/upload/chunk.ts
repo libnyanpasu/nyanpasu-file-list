@@ -6,6 +6,7 @@ import {
   getUploadTokenSecret,
   requireUploadAuthorization,
 } from "@/utils/upload-auth";
+import { getOrCreateFolderByPath } from "@/query/folders";
 
 const parseContentRange = (value: string | null) => {
   if (!value) return null;
@@ -106,6 +107,11 @@ export const Route = createFileRoute("/(api)/upload/chunk")({
           });
         }
 
+        let folderId: string | null = null;
+        if (session.folderPath) {
+          folderId = await getOrCreateFolderByPath(session.folderPath);
+        }
+
         let fileRow;
         try {
           fileRow = await kysely
@@ -115,6 +121,7 @@ export const Route = createFileRoute("/(api)/upload/chunk")({
               file_name: result.file.name,
               file_size: result.file.size,
               mime_type: result.file.file?.mimeType || session.mimeType,
+              folder_id: folderId,
             })
             .returningAll()
             .executeTakeFirstOrThrow();

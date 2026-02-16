@@ -2,6 +2,7 @@ import { uploadFileStream } from "@/services/onedrive";
 import { createFileRoute } from "@tanstack/react-router";
 import { kysely } from "@/lib/kysely";
 import { requireUploadAuthorization } from "@/utils/upload-auth";
+import { getOrCreateFolderByPath } from "@/query/folders";
 
 export const Route = createFileRoute("/(api)/upload")({
   server: {
@@ -61,6 +62,22 @@ export const Route = createFileRoute("/(api)/upload")({
         //   `[upload] stream request start: name=${filename}, size=${fileSize}`,
         // );
 
+        let folderId: string | null = null;
+        const folderPathHeader = request.headers.get("x-folder-path");
+        if (folderPathHeader) {
+          try {
+            const folderPath = decodeURIComponent(folderPathHeader).trim();
+            if (folderPath) {
+              folderId = await getOrCreateFolderByPath(folderPath);
+            }
+          } catch {
+            return Response.json(
+              { error: "Invalid x-folder-path header encoding" },
+              { status: 400 },
+            );
+          }
+        }
+
         const result: Awaited<ReturnType<typeof uploadFileStream>> =
           await uploadFileStream(request.body, fileSize, filename);
 
@@ -71,6 +88,7 @@ export const Route = createFileRoute("/(api)/upload")({
             file_name: result.name,
             file_size: result.size,
             mime_type: result.file?.mimeType,
+            folder_id: folderId,
           })
           .returningAll()
           .executeTakeFirstOrThrow();

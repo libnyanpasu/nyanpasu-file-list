@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon, FolderIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,6 +22,8 @@ import {
 import { filesize } from "filesize";
 import { formatDate } from "@/utils/fmt";
 import { getFileList } from "@/query/files";
+import { getFolderBreadcrumb } from "@/query/folders";
+import { cn } from "@/lib/utils";
 
 function getPageNumbers(
   current: number,
@@ -56,28 +58,44 @@ function getPageNumbers(
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>) => ({
     page: Number(search.page) || 1,
+    folderId: (search.folderId as string) || null,
   }),
   loaderDeps: ({ search }) => ({
     page: search.page,
+    folderId: search.folderId,
   }),
   loader: async ({ deps }) => {
-    return await getFileList({
-      data: {
-        page: deps.page,
-        pageSize: 20,
-      },
-    });
+    const [fileList, breadcrumb] = await Promise.all([
+      getFileList({
+        data: {
+          page: deps.page,
+          pageSize: 20,
+          folderId: deps.folderId,
+        },
+      }),
+      getFolderBreadcrumb({
+        data: { folderId: deps.folderId },
+      }),
+    ]);
+
+    return { ...fileList, breadcrumb };
   },
   component: Home,
 });
 
 function Home() {
-  const { files, total, page, totalPages } = Route.useLoaderData();
+  const { files, folders, total, page, totalPages, breadcrumb } =
+    Route.useLoaderData();
+  const { folderId } = Route.useSearch();
 
   const navigate = useNavigate();
 
   const goToPage = (p: number) => {
-    navigate({ to: "/", search: { page: p } });
+    navigate({ to: "/", search: { page: p, folderId } });
+  };
+
+  const goToFolder = (id: string | null) => {
+    navigate({ to: "/", search: { page: 1, folderId: id } });
   };
 
   return (
@@ -87,6 +105,38 @@ function Home() {
 
         <Badge variant="secondary">{total} files</Badge>
       </div>
+
+      {/* Breadcrumb navigation */}
+      <nav className="mb-4 flex items-center gap-1 text-sm">
+        <button
+          type="button"
+          onClick={() => goToFolder(null)}
+          className={cn(
+            "hover:underline",
+            folderId === null ? "font-semibold" : "text-muted-foreground",
+          )}
+        >
+          Root
+        </button>
+
+        {breadcrumb.map((crumb) => (
+          <span key={crumb.id} className="flex items-center gap-1">
+            <ChevronRightIcon className="h-3 w-3 text-muted-foreground" />
+            <button
+              type="button"
+              onClick={() => goToFolder(crumb.id)}
+              className={cn(
+                "hover:underline",
+                crumb.id === folderId
+                  ? "font-semibold"
+                  : "text-muted-foreground",
+              )}
+            >
+              {crumb.name}
+            </button>
+          </span>
+        ))}
+      </nav>
 
       <div className="rounded-xl border">
         <Table>
@@ -103,10 +153,33 @@ function Home() {
           </TableHeader>
 
           <TableBody>
-            {files.length === 0 ? (
+            {folders.map((folder) => (
+              <TableRow
+                key={`folder-${folder.id}`}
+                className="cursor-pointer"
+                onClick={() => goToFolder(folder.id)}
+              >
+                <TableCell className="max-w-xs truncate font-medium">
+                  <span className="flex items-center gap-2">
+                    <FolderIcon className="h-4 w-4 text-muted-foreground" />
+                    {folder.name}
+                  </span>
+                </TableCell>
+
+                <TableCell className="text-muted-foreground">&mdash;</TableCell>
+
+                <TableCell className="text-muted-foreground">
+                  {formatDate(folder.created_at)}
+                </TableCell>
+
+                <TableCell />
+              </TableRow>
+            ))}
+
+            {files.length === 0 && folders.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={4}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No files found.
