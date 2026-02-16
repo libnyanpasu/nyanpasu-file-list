@@ -9,6 +9,11 @@ import tailwindcss from "@tailwindcss/vite";
 
 const config = defineConfig({
   clearScreen: false,
+  build: {
+    rollupOptions: {
+      external: ["cloudflare:workers"],
+    },
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
