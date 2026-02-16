@@ -35,6 +35,22 @@ export const uploadFileStream = async (
   return result;
 };
 
+export const createUploadSession = async (filename: string) => {
+  const client = await getOnedriveClient();
+  return client.createUploadSessionForFile(filename);
+};
+
+export const uploadChunkToSession = async (
+  uploadUrl: string,
+  chunk: Uint8Array,
+  start: number,
+  end: number,
+  totalSize: number,
+) => {
+  const client = await getOnedriveClient();
+  return client.uploadChunkToSession(uploadUrl, chunk, start, end, totalSize);
+};
+
 export const getFile = async (path: string) => {
   const client = await getOnedriveClient();
 

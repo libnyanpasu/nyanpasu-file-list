@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as apiUploadRouteRouteImport } from './routes/(api)/upload/route'
+import { Route as apiUploadInitRouteImport } from './routes/(api)/upload/init'
+import { Route as apiUploadChunkRouteImport } from './routes/(api)/upload/chunk'
 import { Route as apiBinIdRouteImport } from './routes/(api)/bin/$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +25,16 @@ const apiUploadRouteRoute = apiUploadRouteRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const apiUploadInitRoute = apiUploadInitRouteImport.update({
+  id: '/init',
+  path: '/init',
+  getParentRoute: () => apiUploadRouteRoute,
+} as any)
+const apiUploadChunkRoute = apiUploadChunkRouteImport.update({
+  id: '/chunk',
+  path: '/chunk',
+  getParentRoute: () => apiUploadRouteRoute,
+} as any)
 const apiBinIdRoute = apiBinIdRouteImport.update({
   id: '/(api)/bin/$id',
   path: '/bin/$id',
@@ -31,31 +43,43 @@ const apiBinIdRoute = apiBinIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/upload': typeof apiUploadRouteRoute
+  '/upload': typeof apiUploadRouteRouteWithChildren
   '/bin/$id': typeof apiBinIdRoute
+  '/upload/chunk': typeof apiUploadChunkRoute
+  '/upload/init': typeof apiUploadInitRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/upload': typeof apiUploadRouteRoute
+  '/upload': typeof apiUploadRouteRouteWithChildren
   '/bin/$id': typeof apiBinIdRoute
+  '/upload/chunk': typeof apiUploadChunkRoute
+  '/upload/init': typeof apiUploadInitRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/(api)/upload': typeof apiUploadRouteRoute
+  '/(api)/upload': typeof apiUploadRouteRouteWithChildren
   '/(api)/bin/$id': typeof apiBinIdRoute
+  '/(api)/upload/chunk': typeof apiUploadChunkRoute
+  '/(api)/upload/init': typeof apiUploadInitRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/upload' | '/bin/$id'
+  fullPaths: '/' | '/upload' | '/bin/$id' | '/upload/chunk' | '/upload/init'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/upload' | '/bin/$id'
-  id: '__root__' | '/' | '/(api)/upload' | '/(api)/bin/$id'
+  to: '/' | '/upload' | '/bin/$id' | '/upload/chunk' | '/upload/init'
+  id:
+    | '__root__'
+    | '/'
+    | '/(api)/upload'
+    | '/(api)/bin/$id'
+    | '/(api)/upload/chunk'
+    | '/(api)/upload/init'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  apiUploadRouteRoute: typeof apiUploadRouteRoute
+  apiUploadRouteRoute: typeof apiUploadRouteRouteWithChildren
   apiBinIdRoute: typeof apiBinIdRoute
 }
 
@@ -75,6 +99,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof apiUploadRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(api)/upload/init': {
+      id: '/(api)/upload/init'
+      path: '/init'
+      fullPath: '/upload/init'
+      preLoaderRoute: typeof apiUploadInitRouteImport
+      parentRoute: typeof apiUploadRouteRoute
+    }
+    '/(api)/upload/chunk': {
+      id: '/(api)/upload/chunk'
+      path: '/chunk'
+      fullPath: '/upload/chunk'
+      preLoaderRoute: typeof apiUploadChunkRouteImport
+      parentRoute: typeof apiUploadRouteRoute
+    }
     '/(api)/bin/$id': {
       id: '/(api)/bin/$id'
       path: '/bin/$id'
@@ -85,9 +123,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface apiUploadRouteRouteChildren {
+  apiUploadChunkRoute: typeof apiUploadChunkRoute
+  apiUploadInitRoute: typeof apiUploadInitRoute
+}
+
+const apiUploadRouteRouteChildren: apiUploadRouteRouteChildren = {
+  apiUploadChunkRoute: apiUploadChunkRoute,
+  apiUploadInitRoute: apiUploadInitRoute,
+}
+
+const apiUploadRouteRouteWithChildren = apiUploadRouteRoute._addFileChildren(
+  apiUploadRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  apiUploadRouteRoute: apiUploadRouteRoute,
+  apiUploadRouteRoute: apiUploadRouteRouteWithChildren,
   apiBinIdRoute: apiBinIdRoute,
 }
 export const routeTree = rootRouteImport

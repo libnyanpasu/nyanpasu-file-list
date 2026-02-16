@@ -79,6 +79,10 @@ interface UploadSessionResponse {
   uploadUrl?: string;
 }
 
+interface UploadChunkProgressResponse {
+  nextExpectedRanges?: string[];
+}
+
 class UploadChunkError extends Error {
   status: number;
 
@@ -309,6 +313,72 @@ export class OnedriveService {
     return session.uploadUrl;
   }
 
+  public async createUploadSessionForFile(filename: string): Promise<string> {
+    const uploadPath = `${this.config.storagePath}/${filename}`;
+    return this.createUploadSession(uploadPath);
+  }
+
+  public async uploadChunkToSession(
+    uploadUrl: string,
+    chunk: Uint8Array,
+    start: number,
+    end: number,
+    totalSize: number,
+  ): Promise<{
+    done: boolean;
+    file?: OneDriveFile;
+    nextExpectedRanges?: string[];
+  }> {
+    const response = await retry(
+      async () => {
+        const res = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Range": `bytes ${start}-${end}/${totalSize}`,
+            "Content-Type": "application/octet-stream",
+          },
+          body: chunk,
+        });
+
+        if (res.status === 429 || (res.status >= 500 && res.status <= 504)) {
+          const message = await res.text();
+          throw new UploadChunkError(message || "Temporary upload error", res.status);
+        }
+
+        if (![200, 201, 202].includes(res.status)) {
+          const message = await res.text();
+          throw new Error(
+            `Failed to upload chunk (${start}-${end}): ${message || res.statusText}`,
+          );
+        }
+
+        return res;
+      },
+      {
+        maxRetries: 3,
+        initialDelay: 1000,
+        retryCondition: (error) =>
+          error instanceof TypeError ||
+          (error instanceof UploadChunkError &&
+            (error.status === 429 || (error.status >= 500 && error.status <= 504))),
+      },
+    );
+
+    if (response.status === 202) {
+      const progress = (await response.json()) as UploadChunkProgressResponse;
+      return {
+        done: false,
+        nextExpectedRanges: progress.nextExpectedRanges || [],
+      };
+    }
+
+    const uploadedFile = (await response.json()) as OneDriveFile;
+    return {
+      done: true,
+      file: uploadedFile,
+    };
+  }
+
   private async readStreamToUint8Array(
     fileStream: ReadableStream<Uint8Array>,
   ): Promise<Uint8Array> {
@@ -503,7 +573,7 @@ export class OnedriveService {
         uploadedFile = (await response.json()) as OneDriveFile;
       }
 
-      // uploadedBytes = end + 1;
+      uploadedBytes = end + 1;
       // const percent = ((uploadedBytes / fileSize) * 100).toFixed(2);
       // const chunkIndex = Math.floor(start / chunkSize) + 1;
       // console.info(
