@@ -10,4 +10,4 @@ export const getOnedriveSetting = () =>
     storagePath: env.ONEDRIVE_STORAGE_PATH,
   });
 
-export const uploadToken = env.UPLOAD_TOKEN;
+export const getUploadToken = (): string => env.UPLOAD_TOKEN;

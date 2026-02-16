@@ -1,22 +1,15 @@
 import { uploadFileStream } from "@/services/onedrive";
 import { createFileRoute } from "@tanstack/react-router";
 import { kysely } from "@/lib/kysely";
-import { uploadToken } from "@/utils/env";
+import { requireUploadAuthorization } from "@/utils/upload-auth";
 
 export const Route = createFileRoute("/(api)/upload")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const token = request.headers.get("authorization");
-
-        // TODO: secure token
-        if (token !== `Bearer ${uploadToken}`) {
-          return Response.json(
-            {
-              error: "Unauthorized",
-            },
-            { status: 401 },
-          );
+        const authError = requireUploadAuthorization(request);
+        if (authError) {
+          return authError;
         }
 
         if (!request.body) {

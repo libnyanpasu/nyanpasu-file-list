@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { uploadChunkToSession } from "@/services/onedrive";
-import { uploadToken } from "@/utils/env";
 import { verifyUploadSessionToken } from "@/utils/upload-session-token";
 import { kysely } from "@/lib/kysely";
+import {
+  getUploadTokenSecret,
+  requireUploadAuthorization,
+} from "@/utils/upload-auth";
 
 const parseContentRange = (value: string | null) => {
   if (!value) return null;
@@ -31,26 +34,33 @@ export const Route = createFileRoute("/(api)/upload/chunk")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const token = request.headers.get("authorization");
+        const authError = requireUploadAuthorization(request);
+        if (authError) {
+          return authError;
+        }
 
-        // TODO: secure token
-        if (token !== `Bearer ${uploadToken}`) {
+        const secret = getUploadTokenSecret();
+        if (!secret) {
           return Response.json(
-            {
-              error: "Unauthorized",
-            },
-            { status: 401 },
+            { error: "Server misconfigured: UPLOAD_TOKEN is empty" },
+            { status: 500 },
           );
         }
 
         const uploadId = request.headers.get("x-upload-id");
         if (!uploadId) {
-          return Response.json({ error: "Missing x-upload-id header" }, { status: 400 });
+          return Response.json(
+            { error: "Missing x-upload-id header" },
+            { status: 400 },
+          );
         }
 
-        const session = await verifyUploadSessionToken(uploadId, uploadToken);
+        const session = await verifyUploadSessionToken(uploadId, secret);
         if (!session) {
-          return Response.json({ error: "Invalid or expired uploadId" }, { status: 400 });
+          return Response.json(
+            { error: "Invalid or expired uploadId" },
+            { status: 400 },
+          );
         }
 
         const range = parseContentRange(request.headers.get("content-range"));
