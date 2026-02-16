@@ -1,0 +1,24 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nyanpasu-file-list",
+  "compatibility_date": "2025-09-02",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "observability": {
+    "enabled": true,
+  },
+  "d1_databases": [
+    {
+      "binding": "D1",
+      "database_name": "nyanpasu-file-list",
+      "database_id": "f2efd833-3947-404c-8c1a-35c163bd28c7",
+    },
+  ],
+  "placement": {
+    "mode": "smart",
+  },
+}
