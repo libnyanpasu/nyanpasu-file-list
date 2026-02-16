@@ -26,7 +26,11 @@ export const uploadFileStream = async (
 ) => {
   const client = await getOnedriveClient();
 
-  const result = await client.uploadReadableStream(fileStream, filename, fileSize);
+  const result = await client.uploadReadableStream(
+    fileStream,
+    filename,
+    fileSize,
+  );
 
   if (!result) {
     throw new Error("Failed to upload file");

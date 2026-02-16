@@ -350,7 +350,10 @@ export class OnedriveService {
 
         if (res.status === 429 || (res.status >= 500 && res.status <= 504)) {
           const message = await res.text();
-          throw new UploadChunkError(message || "Temporary upload error", res.status);
+          throw new UploadChunkError(
+            message || "Temporary upload error",
+            res.status,
+          );
         }
 
         if (![200, 201, 202].includes(res.status)) {
@@ -368,7 +371,8 @@ export class OnedriveService {
         retryCondition: (error) =>
           error instanceof TypeError ||
           (error instanceof UploadChunkError &&
-            (error.status === 429 || (error.status >= 500 && error.status <= 504))),
+            (error.status === 429 ||
+              (error.status >= 500 && error.status <= 504))),
       },
     );
 

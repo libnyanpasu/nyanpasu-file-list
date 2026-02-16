@@ -16,10 +16,7 @@ export const MAX_SESSION_AGE_MS = 2 * 60 * 60 * 1000;
 
 export function resolveChunkSize(multiplier?: number | null): number {
   const raw = Number(multiplier || DEFAULT_CHUNK_MULTIPLIER);
-  const clamped = Math.max(
-    1,
-    Math.min(MAX_CHUNK_MULTIPLIER, Math.floor(raw)),
-  );
+  const clamped = Math.max(1, Math.min(MAX_CHUNK_MULTIPLIER, Math.floor(raw)));
   return clamped * CHUNK_BASE;
 }
 
@@ -27,9 +24,9 @@ export function resolveChunkSize(multiplier?: number | null): number {
  * Common preflight for init endpoints: auth, secret, OneDrive settings.
  * Returns `{ secret }` on success or `{ error: Response }` on failure.
  */
-export function initPreflight(request: Request):
-  | { secret: string; error?: never }
-  | { secret?: never; error: Response } {
+export function initPreflight(
+  request: Request,
+): { secret: string; error?: never } | { secret?: never; error: Response } {
   const authError = requireUploadAuthorization(request);
   if (authError) return { error: authError };
 
@@ -60,7 +57,7 @@ export function initPreflight(request: Request):
  * Common preflight for chunk endpoints: auth, secret, session token, content-range, body size.
  * Returns parsed session + range + bytes on success or `{ error: Response }` on failure.
  */
-export async function chunkPreflight(request: Request):
+export async function chunkPreflight(request: Request): Promise<
   | {
       session: NonNullable<
         Awaited<ReturnType<typeof verifyUploadSessionToken>>
@@ -69,7 +66,8 @@ export async function chunkPreflight(request: Request):
       bytes: Uint8Array;
       error?: never;
     }
-  | { error: Response; session?: never; range?: never; bytes?: never } {
+  | { error: Response; session?: never; range?: never; bytes?: never }
+> {
   const authError = requireUploadAuthorization(request);
   if (authError) return { error: authError };
 

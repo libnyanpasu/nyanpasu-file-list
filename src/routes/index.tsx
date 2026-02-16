@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { ExternalLinkIcon, FolderIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +74,9 @@ export const Route = createFileRoute("/")({
         },
       }),
       getFolderBreadcrumb({
-        data: { folderId: deps.folderId },
+        data: {
+          folderId: deps.folderId,
+        },
       }),
     ]);
 
@@ -86,17 +88,8 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { files, folders, total, page, totalPages, breadcrumb } =
     Route.useLoaderData();
+
   const { folderId } = Route.useSearch();
-
-  const navigate = useNavigate();
-
-  const goToPage = (p: number) => {
-    navigate({ to: "/", search: { page: p, folderId } });
-  };
-
-  const goToFolder = (id: string | null) => {
-    navigate({ to: "/", search: { page: 1, folderId: id } });
-  };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -108,23 +101,31 @@ function Home() {
 
       {/* Breadcrumb navigation */}
       <nav className="mb-4 flex items-center gap-1 text-sm">
-        <button
+        <Link
           type="button"
-          onClick={() => goToFolder(null)}
+          to="/"
+          search={{
+            page: 1,
+            folderId: null,
+          }}
           className={cn(
             "hover:underline",
             folderId === null ? "font-semibold" : "text-muted-foreground",
           )}
         >
           Root
-        </button>
+        </Link>
 
         {breadcrumb.map((crumb) => (
           <span key={crumb.id} className="flex items-center gap-1">
             <ChevronRightIcon className="h-3 w-3 text-muted-foreground" />
-            <button
+            <Link
               type="button"
-              onClick={() => goToFolder(crumb.id)}
+              to="/"
+              search={{
+                page: 1,
+                folderId: crumb.id,
+              }}
               className={cn(
                 "hover:underline",
                 crumb.id === folderId
@@ -133,7 +134,7 @@ function Home() {
               )}
             >
               {crumb.name}
-            </button>
+            </Link>
           </span>
         ))}
       </nav>
@@ -154,16 +155,19 @@ function Home() {
 
           <TableBody>
             {folders.map((folder) => (
-              <TableRow
-                key={`folder-${folder.id}`}
-                className="cursor-pointer"
-                onClick={() => goToFolder(folder.id)}
-              >
+              <TableRow key={`folder-${folder.id}`} className="cursor-pointer">
                 <TableCell className="max-w-xs truncate font-medium">
-                  <span className="flex items-center gap-2">
+                  <Link
+                    to="/"
+                    search={{
+                      page: 1,
+                      folderId: folder.id,
+                    }}
+                    className="flex items-center gap-2"
+                  >
                     <FolderIcon className="h-4 w-4 text-muted-foreground" />
                     {folder.name}
-                  </span>
+                  </Link>
                 </TableCell>
 
                 <TableCell className="text-muted-foreground">&mdash;</TableCell>
@@ -231,11 +235,21 @@ function Home() {
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  onClick={() => goToPage(Math.max(1, page - 1))}
-                  className={
+                  // onClick={() => goToPage(Math.max(1, page - 1))}
+                  className={cn(
+                    "flex items-center justify-center",
                     page <= 1
                       ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
+                      : "cursor-pointer",
+                  )}
+                  render={
+                    <Link
+                      to="/"
+                      search={{
+                        page: Math.max(1, page - 1),
+                        folderId,
+                      }}
+                    />
                   }
                 />
               </PaginationItem>
@@ -249,8 +263,16 @@ function Home() {
                   <PaginationItem key={p}>
                     <PaginationLink
                       isActive={p === page}
-                      onClick={() => goToPage(p)}
                       className="cursor-pointer"
+                      render={
+                        <Link
+                          to="/"
+                          search={{
+                            page: p,
+                            folderId,
+                          }}
+                        />
+                      }
                     >
                       {p}
                     </PaginationLink>
@@ -260,11 +282,20 @@ function Home() {
 
               <PaginationItem>
                 <PaginationNext
-                  onClick={() => goToPage(Math.min(totalPages, page + 1))}
-                  className={
+                  className={cn(
+                    "flex items-center justify-center",
                     page >= totalPages
                       ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
+                      : "cursor-pointer",
+                  )}
+                  render={
+                    <Link
+                      to="/"
+                      search={{
+                        page: Math.min(totalPages, page + 1),
+                        folderId,
+                      }}
+                    />
                   }
                 />
               </PaginationItem>
