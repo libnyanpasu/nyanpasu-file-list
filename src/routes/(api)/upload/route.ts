@@ -27,9 +27,29 @@ export const Route = createFileRoute("/(api)/upload")({
         }
 
         const filenameHeader = request.headers.get("x-file-name");
-        const filename = filenameHeader
-          ? decodeURIComponent(filenameHeader)
-          : `upload-${Date.now()}`;
+        if (!filenameHeader) {
+          return Response.json(
+            { error: "Missing x-file-name header" },
+            { status: 400 },
+          );
+        }
+
+        let filename = "";
+        try {
+          filename = decodeURIComponent(filenameHeader).trim();
+        } catch {
+          return Response.json(
+            { error: "Invalid x-file-name header encoding" },
+            { status: 400 },
+          );
+        }
+
+        if (!filename) {
+          return Response.json(
+            { error: "x-file-name header cannot be empty" },
+            { status: 400 },
+          );
+        }
         const sizeHeader = request.headers.get("x-file-size");
         const contentLengthHeader = request.headers.get("content-length");
         const fileSize = Number(sizeHeader || contentLengthHeader || 0);
