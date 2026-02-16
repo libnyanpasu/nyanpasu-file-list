@@ -2,51 +2,29 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createCacheUploadSession } from "@/services/onedrive";
 import { createUploadSessionToken } from "@/utils/upload-session-token";
 import { formatError } from "@/utils/fmt";
-import { getMissingOnedriveSettings } from "@/utils/env";
 import {
-  getUploadTokenSecret,
-  requireUploadAuthorization,
-} from "@/utils/upload-auth";
-
-const MAX_SESSION_AGE_MS = 2 * 60 * 60 * 1000;
-const CHUNK_SIZE = 10 * 320 * 1024;
+  MAX_SESSION_AGE_MS,
+  resolveChunkSize,
+  initPreflight,
+} from "@/utils/upload-preflight";
 
 export const Route = createFileRoute("/(api)/cache/init")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
-          const authError = requireUploadAuthorization(request);
-          if (authError) {
-            return authError;
-          }
-
-          const secret = getUploadTokenSecret();
-          if (!secret) {
-            return Response.json(
-              { error: "Server misconfigured: UPLOAD_TOKEN is empty" },
-              { status: 500 },
-            );
-          }
-
-          const missingOnedriveSettings = getMissingOnedriveSettings();
-          if (missingOnedriveSettings.length > 0) {
-            return Response.json(
-              {
-                error: "Server misconfigured: missing OneDrive settings",
-                missing: missingOnedriveSettings,
-              },
-              { status: 500 },
-            );
-          }
+          const pre = initPreflight(request);
+          if (pre.error) return pre.error;
 
           const body = (await request.json().catch(() => null)) as {
             key?: string;
             fileSize?: number;
+            chunkMultiplier?: number;
           } | null;
 
           const key = body?.key?.trim();
           const fileSize = Number(body?.fileSize || 0);
+          const chunkSize = resolveChunkSize(body?.chunkMultiplier);
 
           if (!key) {
             return Response.json(
@@ -74,14 +52,14 @@ export const Route = createFileRoute("/(api)/cache/init")({
               folderPath: null,
               exp: expiresAt,
             },
-            secret,
+            pre.secret,
           );
 
           return Response.json({
             uploadId,
             key,
             fileSize,
-            chunkSize: CHUNK_SIZE,
+            chunkSize,
             expiresAt,
           });
         } catch (error) {
