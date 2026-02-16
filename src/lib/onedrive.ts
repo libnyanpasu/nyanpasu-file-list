@@ -43,6 +43,28 @@ const HOST = {
   api: "https://graph.microsoft.com",
 };
 
+const encodeGraphPath = (path: string) =>
+  path
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+const toHexPrefix = (bytes: Uint8Array, length: number = 16) =>
+  Array.from(bytes.slice(0, length))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+const isAsciiBytes = (bytes: Uint8Array) => bytes.every((b) => b <= 0x7f);
+
+const toBytesFromBinaryString = (binary: string) => {
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    out[i] = binary.charCodeAt(i) & 0xff;
+  }
+  return out;
+};
+
 // Add Microsoft Graph error response interface
 interface MicrosoftGraphErrorResponse {
   error?: {
@@ -132,7 +154,8 @@ export class OnedriveService {
     try {
       await this.ensureValidToken();
 
-      const url = `${this.tenantUrl}:${encodeURIComponent(`${this.config.storagePath}/${path}`)}`;
+      const graphPath = encodeGraphPath(`${this.config.storagePath}/${path}`);
+      const url = `${this.tenantUrl}:/${graphPath}`;
 
       const response = await fetchWithRetry(url, {
         method: "GET",
@@ -206,7 +229,8 @@ export class OnedriveService {
     try {
       await this.ensureValidToken();
 
-      const url = `${this.tenantUrl}:${encodeURIComponent(uploadPath)}:/content`;
+      const graphPath = encodeGraphPath(uploadPath);
+      const url = `${this.tenantUrl}:/${graphPath}:/content`;
 
       const response = await fetchWithRetry(url, {
         method: "PUT",
@@ -244,7 +268,8 @@ export class OnedriveService {
 
   private async createUploadSession(uploadPath: string): Promise<string> {
     await this.ensureValidToken();
-    const url = `${this.tenantUrl}:${encodeURIComponent(uploadPath)}:/createUploadSession`;
+    const graphPath = encodeGraphPath(uploadPath);
+    const url = `${this.tenantUrl}:/${graphPath}:/createUploadSession`;
 
     const response = await fetchWithRetry(url, {
       method: "POST",
@@ -254,7 +279,8 @@ export class OnedriveService {
       },
       body: JSON.stringify({
         item: {
-          "@microsoft.graph.conflictBehavior": "rename",
+          // Keep the original filename stable; overwrite content on conflict.
+          "@microsoft.graph.conflictBehavior": "replace",
         },
       }),
     });
@@ -283,6 +309,81 @@ export class OnedriveService {
     return session.uploadUrl;
   }
 
+  private async readStreamToUint8Array(
+    fileStream: ReadableStream<Uint8Array>,
+  ): Promise<Uint8Array> {
+    const reader = fileStream.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value || value.byteLength === 0) continue;
+        // Copy chunk to avoid potential buffer reuse by runtime stream implementations.
+        const copied = value.slice();
+        chunks.push(copied);
+        total += copied.byteLength;
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    const merged = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      merged.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return merged;
+  }
+
+  private decodeBase64IfNeeded(
+    bytes: Uint8Array,
+    filename: string,
+  ): { bytes: Uint8Array; decoded: boolean } {
+    if (!isAsciiBytes(bytes)) {
+      return { bytes, decoded: false };
+    }
+
+    const rawText = new TextDecoder().decode(bytes).trim();
+    if (!rawText) {
+      return { bytes, decoded: false };
+    }
+
+    let base64 = rawText;
+    if (rawText.startsWith("data:")) {
+      const comma = rawText.indexOf(",");
+      const meta = comma >= 0 ? rawText.slice(0, comma) : "";
+      if (!meta.includes(";base64") || comma < 0) {
+        return { bytes, decoded: false };
+      }
+      base64 = rawText.slice(comma + 1);
+    }
+
+    const normalized = base64.replace(/\s+/g, "");
+    if (
+      normalized.length === 0 ||
+      normalized.length % 4 !== 0 ||
+      !/^[A-Za-z0-9+/=]+$/.test(normalized)
+    ) {
+      return { bytes, decoded: false };
+    }
+
+    try {
+      const decoded = toBytesFromBinaryString(atob(normalized));
+      if (decoded.byteLength === 0) {
+        return { bytes, decoded: false };
+      }
+      // console.warn(
+      //   `[onedrive] detected base64 payload, auto-decoded before upload: name=${filename}, encoded=${bytes.byteLength}, decoded=${decoded.byteLength}`,
+      // );
+      return { bytes: decoded, decoded: true };
+    } catch {
+      return { bytes, decoded: false };
+    }
+  }
+
   public async uploadReadableStream(
     fileStream: ReadableStream<Uint8Array>,
     filename: string,
@@ -293,12 +394,63 @@ export class OnedriveService {
     }
 
     const uploadPath = `${this.config.storagePath}/${filename}`;
+
+    // Small files use direct upload for better compatibility and simpler integrity.
+    if (fileSize <= 4 * 1024 * 1024) {
+      await this.ensureValidToken();
+      const graphPath = encodeGraphPath(uploadPath);
+      const url = `${this.tenantUrl}:/${graphPath}:/content`;
+      const rawBytes = await this.readStreamToUint8Array(fileStream);
+      const { bytes, decoded } = this.decodeBase64IfNeeded(rawBytes, filename);
+      const effectiveSize = bytes.byteLength;
+
+      if (decoded) {
+        // console.warn(
+        //   `[onedrive] x-file-size likely encoded size: declared=${fileSize}, effective=${effectiveSize}`,
+        // );
+      }
+
+      if (!decoded && effectiveSize !== fileSize) {
+        throw new Error(
+          `Upload size mismatch before direct upload: received=${effectiveSize}, expected=${fileSize}`,
+        );
+      }
+
+      const response = await fetchWithRetry(url, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${this.msAuth?.access_token}`,
+          "Content-Type": "application/octet-stream",
+        },
+        body: bytes,
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(
+          `Failed to upload small file: ${message || response.statusText}`,
+        );
+      }
+
+      const uploadedFile = (await response.json()) as OneDriveFile;
+      if (uploadedFile.size !== effectiveSize) {
+        throw new Error(
+          `Uploaded small file size mismatch: uploaded=${uploadedFile.size}, expected=${effectiveSize}`,
+        );
+      }
+
+      // console.info(
+      //   `[onedrive] upload completed(direct): name=${filename}, uploaded=${uploadedFile.size}/${effectiveSize}, head=${toHexPrefix(bytes)}`,
+      // );
+      return uploadedFile;
+    }
+
     const uploadUrl = await this.createUploadSession(uploadPath);
     // OneDrive requires chunk size to be a multiple of 320 KiB.
     const chunkSize = 10 * 320 * 1024;
     // const totalChunks = Math.ceil(fileSize / chunkSize);
     let uploadedFile: OneDriveFile | null = null;
-    // let uploadedBytes = 0;
+    let uploadedBytes = 0;
     let offset = 0;
     let pending = new Uint8Array(0);
 
@@ -381,19 +533,32 @@ export class OnedriveService {
 
       if (pending.byteLength > 0) {
         await flushChunk(offset, pending);
+        offset += pending.byteLength;
       }
     } finally {
       reader.releaseLock();
+    }
+
+    if (offset !== fileSize || uploadedBytes !== fileSize) {
+      throw new Error(
+        `Upload size mismatch: uploaded=${uploadedBytes}, expected=${fileSize}`,
+      );
     }
 
     // console.info(
     //   `[onedrive] upload completed(stream): name=${filename}, uploaded=${uploadedBytes}/${fileSize}`,
     // );
 
-    if (uploadedFile) {
-      return uploadedFile;
+    const finalizedFile = uploadedFile;
+    if (finalizedFile) {
+      // console.info(
+      //   "[onedrive] upload finalized(stream): received final metadata",
+      // );
+      return finalizedFile;
     }
 
-    return this.getFile(filename);
+    throw new Error(
+      "Upload finished without final file metadata from OneDrive",
+    );
   }
 }
