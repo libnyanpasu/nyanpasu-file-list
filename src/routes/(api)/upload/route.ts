@@ -63,10 +63,11 @@ export const Route = createFileRoute("/(api)/upload")({
         // );
 
         let folderId: string | null = null;
+        let folderPath: string | null = null;
         const folderPathHeader = request.headers.get("x-folder-path");
         if (folderPathHeader) {
           try {
-            const folderPath = decodeURIComponent(folderPathHeader).trim();
+            folderPath = decodeURIComponent(folderPathHeader).trim() || null;
             if (folderPath) {
               folderId = await getOrCreateFolderByPath(folderPath);
             }
@@ -78,8 +79,9 @@ export const Route = createFileRoute("/(api)/upload")({
           }
         }
 
+        const uploadPath = folderPath ? `${folderPath}/${filename}` : filename;
         const result: Awaited<ReturnType<typeof uploadFileStream>> =
-          await uploadFileStream(request.body, fileSize, filename);
+          await uploadFileStream(request.body, fileSize, uploadPath);
 
         const inserted = await kysely
           .insertInto("files")

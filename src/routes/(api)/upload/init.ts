@@ -44,7 +44,11 @@ export const Route = createFileRoute("/(api)/upload/init")({
             );
           }
 
-          const uploadUrl = await createUploadSession(filename);
+          const uploadPath = folderPath
+            ? `${folderPath}/${filename}`
+            : filename;
+
+          const uploadUrl = await createUploadSession(uploadPath);
           const expiresAt = Date.now() + MAX_SESSION_AGE_MS;
           const uploadId = await createUploadSessionToken(
             {
