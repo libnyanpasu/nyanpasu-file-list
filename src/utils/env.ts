@@ -20,6 +20,9 @@ export const getOnedriveSetting = () =>
 
 export const getUploadToken = (): string | undefined => getEnvValue("UPLOAD_TOKEN");
 
+export const getCacheStoragePath = (): string | undefined =>
+  getEnvValue("ONEDRIVE_CACHE_STORAGE_PATH");
+
 export const getMissingOnedriveSettings = (): string[] => {
   const requiredKeys = [
     "ONEDRIVE_CLIENT_ID",

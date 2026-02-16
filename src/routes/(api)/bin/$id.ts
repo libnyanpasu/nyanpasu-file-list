@@ -9,6 +9,7 @@ export const Route = createFileRoute("/(api)/bin/$id")({
         const file = await kysely
           .selectFrom("files")
           .where("id", "=", params.id)
+          .where("hidden", "=", 0)
           .selectAll()
           .executeTakeFirst();
 

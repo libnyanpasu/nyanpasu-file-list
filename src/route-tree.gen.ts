@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as apiUploadRouteRouteImport } from './routes/(api)/upload/route'
+import { Route as apiCacheRouteRouteImport } from './routes/(api)/cache/route'
 import { Route as apiUploadInitRouteImport } from './routes/(api)/upload/init'
 import { Route as apiUploadChunkRouteImport } from './routes/(api)/upload/chunk'
+import { Route as apiCacheKeyRouteImport } from './routes/(api)/cache/$key'
 import { Route as apiBinIdRouteImport } from './routes/(api)/bin/$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -25,6 +27,11 @@ const apiUploadRouteRoute = apiUploadRouteRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const apiCacheRouteRoute = apiCacheRouteRouteImport.update({
+  id: '/(api)/cache',
+  path: '/cache',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const apiUploadInitRoute = apiUploadInitRouteImport.update({
   id: '/init',
   path: '/init',
@@ -35,6 +42,11 @@ const apiUploadChunkRoute = apiUploadChunkRouteImport.update({
   path: '/chunk',
   getParentRoute: () => apiUploadRouteRoute,
 } as any)
+const apiCacheKeyRoute = apiCacheKeyRouteImport.update({
+  id: '/$key',
+  path: '/$key',
+  getParentRoute: () => apiCacheRouteRoute,
+} as any)
 const apiBinIdRoute = apiBinIdRouteImport.update({
   id: '/(api)/bin/$id',
   path: '/bin/$id',
@@ -43,42 +55,65 @@ const apiBinIdRoute = apiBinIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cache': typeof apiCacheRouteRouteWithChildren
   '/upload': typeof apiUploadRouteRouteWithChildren
   '/bin/$id': typeof apiBinIdRoute
+  '/cache/$key': typeof apiCacheKeyRoute
   '/upload/chunk': typeof apiUploadChunkRoute
   '/upload/init': typeof apiUploadInitRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cache': typeof apiCacheRouteRouteWithChildren
   '/upload': typeof apiUploadRouteRouteWithChildren
   '/bin/$id': typeof apiBinIdRoute
+  '/cache/$key': typeof apiCacheKeyRoute
   '/upload/chunk': typeof apiUploadChunkRoute
   '/upload/init': typeof apiUploadInitRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/(api)/cache': typeof apiCacheRouteRouteWithChildren
   '/(api)/upload': typeof apiUploadRouteRouteWithChildren
   '/(api)/bin/$id': typeof apiBinIdRoute
+  '/(api)/cache/$key': typeof apiCacheKeyRoute
   '/(api)/upload/chunk': typeof apiUploadChunkRoute
   '/(api)/upload/init': typeof apiUploadInitRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/upload' | '/bin/$id' | '/upload/chunk' | '/upload/init'
+  fullPaths:
+    | '/'
+    | '/cache'
+    | '/upload'
+    | '/bin/$id'
+    | '/cache/$key'
+    | '/upload/chunk'
+    | '/upload/init'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/upload' | '/bin/$id' | '/upload/chunk' | '/upload/init'
+  to:
+    | '/'
+    | '/cache'
+    | '/upload'
+    | '/bin/$id'
+    | '/cache/$key'
+    | '/upload/chunk'
+    | '/upload/init'
   id:
     | '__root__'
     | '/'
+    | '/(api)/cache'
     | '/(api)/upload'
     | '/(api)/bin/$id'
+    | '/(api)/cache/$key'
     | '/(api)/upload/chunk'
     | '/(api)/upload/init'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  apiCacheRouteRoute: typeof apiCacheRouteRouteWithChildren
   apiUploadRouteRoute: typeof apiUploadRouteRouteWithChildren
   apiBinIdRoute: typeof apiBinIdRoute
 }
@@ -99,6 +134,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof apiUploadRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(api)/cache': {
+      id: '/(api)/cache'
+      path: '/cache'
+      fullPath: '/cache'
+      preLoaderRoute: typeof apiCacheRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(api)/upload/init': {
       id: '/(api)/upload/init'
       path: '/init'
@@ -113,6 +155,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof apiUploadChunkRouteImport
       parentRoute: typeof apiUploadRouteRoute
     }
+    '/(api)/cache/$key': {
+      id: '/(api)/cache/$key'
+      path: '/$key'
+      fullPath: '/cache/$key'
+      preLoaderRoute: typeof apiCacheKeyRouteImport
+      parentRoute: typeof apiCacheRouteRoute
+    }
     '/(api)/bin/$id': {
       id: '/(api)/bin/$id'
       path: '/bin/$id'
@@ -122,6 +171,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface apiCacheRouteRouteChildren {
+  apiCacheKeyRoute: typeof apiCacheKeyRoute
+}
+
+const apiCacheRouteRouteChildren: apiCacheRouteRouteChildren = {
+  apiCacheKeyRoute: apiCacheKeyRoute,
+}
+
+const apiCacheRouteRouteWithChildren = apiCacheRouteRoute._addFileChildren(
+  apiCacheRouteRouteChildren,
+)
 
 interface apiUploadRouteRouteChildren {
   apiUploadChunkRoute: typeof apiUploadChunkRoute
@@ -139,6 +200,7 @@ const apiUploadRouteRouteWithChildren = apiUploadRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  apiCacheRouteRoute: apiCacheRouteRouteWithChildren,
   apiUploadRouteRoute: apiUploadRouteRouteWithChildren,
   apiBinIdRoute: apiBinIdRoute,
 }

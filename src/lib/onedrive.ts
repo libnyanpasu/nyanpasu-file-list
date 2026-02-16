@@ -454,6 +454,125 @@ export class OnedriveService {
     }
   }
 
+  public async getFileWithBasePath(
+    path: string,
+    basePath: string,
+  ): Promise<OneDriveFile> {
+    try {
+      await this.ensureValidToken();
+
+      const graphPath = encodeGraphPath(`${basePath}/${path}`);
+      const url = `${this.tenantUrl}:/${graphPath}`;
+
+      const response = await fetchWithRetry(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${this.msAuth?.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = (await response
+          .json()
+          .catch(() => null)) as MicrosoftGraphErrorResponse | null;
+        if (
+          errorData?.error?.code === "InvalidAuthenticationToken" ||
+          response.status === 401
+        ) {
+          await this.auth();
+          return this.getFileWithBasePath(path, basePath);
+        }
+
+        const message = JSON.stringify(errorData) || (await response.text());
+        throw new Error(`Failed to get file: ${message}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      throw new Error(formatError(err) || "Error getting file");
+    }
+  }
+
+  public async uploadWithBasePath(
+    bytes: Uint8Array,
+    filename: string,
+    basePath: string,
+  ): Promise<OneDriveFile> {
+    const uploadPath = `${basePath}/${filename}`;
+
+    try {
+      await this.ensureValidToken();
+
+      const graphPath = encodeGraphPath(uploadPath);
+      const url = `${this.tenantUrl}:/${graphPath}:/content`;
+
+      const response = await fetchWithRetry(url, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${this.msAuth?.access_token}`,
+          "Content-Type": "application/octet-stream",
+        },
+        body: bytes,
+      });
+
+      if (!response.ok) {
+        const errorData = (await response
+          .json()
+          .catch(() => null)) as MicrosoftGraphErrorResponse | null;
+        if (
+          errorData?.error?.code === "InvalidAuthenticationToken" ||
+          response.status === 401
+        ) {
+          await this.auth();
+          return this.uploadWithBasePath(bytes, filename, basePath);
+        }
+
+        const message = JSON.stringify(errorData) || (await response.text());
+        throw new Error(`Failed to upload file: ${message}`);
+      }
+
+      return response.json();
+    } catch (err) {
+      throw new Error(formatError(err));
+    }
+  }
+
+  public async deleteFile(path: string, basePath?: string): Promise<void> {
+    const base = basePath ?? this.config.storagePath;
+
+    try {
+      await this.ensureValidToken();
+
+      const graphPath = encodeGraphPath(`${base}/${path}`);
+      const url = `${this.tenantUrl}:/${graphPath}`;
+
+      const response = await fetchWithRetry(url, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${this.msAuth?.access_token}`,
+        },
+      });
+
+      if (!response.ok && response.status !== 404) {
+        const errorData = (await response
+          .json()
+          .catch(() => null)) as MicrosoftGraphErrorResponse | null;
+        if (
+          errorData?.error?.code === "InvalidAuthenticationToken" ||
+          response.status === 401
+        ) {
+          await this.auth();
+          return this.deleteFile(path, basePath);
+        }
+
+        const message = JSON.stringify(errorData) || (await response.text());
+        throw new Error(`Failed to delete file: ${message}`);
+      }
+    } catch (err) {
+      throw new Error(formatError(err) || "Error deleting file");
+    }
+  }
+
   public async uploadReadableStream(
     fileStream: ReadableStream<Uint8Array>,
     filename: string,

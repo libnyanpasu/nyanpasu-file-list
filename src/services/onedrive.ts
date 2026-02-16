@@ -1,5 +1,5 @@
 import { OnedriveService } from "@/lib/onedrive";
-import { getOnedriveSetting } from "@/utils/env";
+import { getOnedriveSetting, getCacheStoragePath } from "@/utils/env";
 
 let cachedOnedriveClient: OnedriveService | null = null;
 
@@ -57,6 +57,32 @@ export const getFile = async (path: string) => {
   const file = await client.getFile(path);
 
   return file;
+};
+
+const requireCacheStoragePath = (): string => {
+  const path = getCacheStoragePath();
+  if (!path) {
+    throw new Error("ONEDRIVE_CACHE_STORAGE_PATH is not configured");
+  }
+  return path;
+};
+
+export const uploadCacheFile = async (body: Uint8Array, key: string) => {
+  const client = await getOnedriveClient();
+  const basePath = requireCacheStoragePath();
+  return client.uploadWithBasePath(body, key, basePath);
+};
+
+export const getCacheFile = async (key: string) => {
+  const client = await getOnedriveClient();
+  const basePath = requireCacheStoragePath();
+  return client.getFileWithBasePath(key, basePath);
+};
+
+export const deleteCacheFile = async (key: string) => {
+  const client = await getOnedriveClient();
+  const basePath = requireCacheStoragePath();
+  return client.deleteFile(key, basePath);
 };
 
 // export const getFile = ac
