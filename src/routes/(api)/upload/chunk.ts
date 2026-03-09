@@ -30,7 +30,11 @@ export const Route = createFileRoute("/(api)/upload/chunk")({
 
         let folderId: string | null = null;
         if (session.folderPath) {
-          folderId = await getOrCreateFolderByPath(session.folderPath);
+          folderId = await getOrCreateFolderByPath({
+            data: {
+              path: session.folderPath,
+            },
+          });
         }
 
         let fileRow;

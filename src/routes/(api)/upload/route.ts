@@ -69,7 +69,11 @@ export const Route = createFileRoute("/(api)/upload")({
           try {
             folderPath = decodeURIComponent(folderPathHeader).trim() || null;
             if (folderPath) {
-              folderId = await getOrCreateFolderByPath(folderPath);
+              folderId = await getOrCreateFolderByPath({
+                data: {
+                  path: folderPath,
+                },
+              });
             }
           } catch {
             return Response.json(
