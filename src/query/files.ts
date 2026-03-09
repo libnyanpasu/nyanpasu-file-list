@@ -41,7 +41,7 @@ export const getFileList = createServerFn()
             : eb("parent_id", "=", data.folderId),
         )
         .selectAll()
-        .orderBy("name", "asc")
+        .orderBy("created_at", "desc")
         .execute(),
     ]);
 
