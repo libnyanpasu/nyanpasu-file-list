@@ -182,9 +182,12 @@ export class OnedriveService {
           return this.getFile(path);
         }
 
-        const message = JSON.stringify(errorData) || (await response.text());
-        console.error(message);
-        throw new Error(`Failed to get file: ${message}`);
+        const message =
+          errorData?.error?.message ??
+          JSON.stringify(errorData) ??
+          (await response.text());
+
+        throw new Error(message);
       }
 
       return await response.json();

@@ -17,7 +17,14 @@ export const Route = createFileRoute("/(api)/bin/$id")({
           return Response.json({ error: "Not found" }, { status: 404 });
         }
 
-        const onedriveFile = await getFile(file.file_name);
+        let onedriveFile: Awaited<ReturnType<typeof getFile>>;
+
+        try {
+          onedriveFile = await getFile(file.file_name);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return Response.json({ error: message }, { status: 404 });
+        }
 
         const downloadUrl = onedriveFile["@microsoft.graph.downloadUrl"];
 
