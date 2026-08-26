@@ -18,7 +18,7 @@
 		"@base-ui/react": "^1.2.0",
 		"@cloudflare/vite-plugin": "^1.25.0",
 		"@tailwindcss/vite": "^4.1.18",
-		"@tanstack/react-devtools": "^0.7.11",
+		"@tanstack/react-devtools": "^0.10.0",
 		"@tanstack/react-router": "^1.160.0",
 		"@tanstack/react-router-devtools": "^1.160.0",
 		"@tanstack/react-router-ssr-query": "^1.160.0",
