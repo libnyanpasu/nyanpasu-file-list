@@ -15,7 +15,8 @@ export const getFileList = createServerFn()
 
     let filesQuery = kysely
       .selectFrom("files")
-      .where("hidden", "=", 0);
+      .where("hidden", "=", 0)
+      .where("status", "=", "ready");
 
     if (data.folderId === null) {
       filesQuery = filesQuery.where("folder_id", "is", null);

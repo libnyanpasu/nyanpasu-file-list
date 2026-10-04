@@ -10,29 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as apiUploadRouteRouteImport } from './routes/(api)/upload/route'
-import { Route as apiFoldersRouteRouteImport } from './routes/(api)/folders/route'
 import { Route as apiCacheRouteRouteImport } from './routes/(api)/cache/route'
-import { Route as apiUploadInitRouteImport } from './routes/(api)/upload/init'
-import { Route as apiUploadChunkRouteImport } from './routes/(api)/upload/chunk'
-import { Route as apiCacheInitRouteImport } from './routes/(api)/cache/init'
-import { Route as apiCacheChunkRouteImport } from './routes/(api)/cache/chunk'
-import { Route as apiCacheKeyRouteImport } from './routes/(api)/cache/$key'
+import { Route as apiFoldersRouteRouteImport } from './routes/(api)/folders/route'
+import { Route as apiUploadRouteRouteImport } from './routes/(api)/upload/route'
+import { Route as apiArchiveBuildsRouteRouteImport } from './routes/(api)/archive/builds/route'
 import { Route as apiBinIdRouteImport } from './routes/(api)/bin/$id'
+import { Route as apiCacheKeyRouteImport } from './routes/(api)/cache/$key'
+import { Route as apiCacheChunkRouteImport } from './routes/(api)/cache/chunk'
+import { Route as apiCacheInitRouteImport } from './routes/(api)/cache/init'
+import { Route as apiUploadChunkRouteImport } from './routes/(api)/upload/chunk'
+import { Route as apiUploadInitRouteImport } from './routes/(api)/upload/init'
+import { Route as apiArchiveBuildsBuildIdRouteImport } from './routes/(api)/archive/builds/$buildId'
+import { Route as apiArchiveBuildsBuildIdVerifyRouteImport } from './routes/(api)/archive/builds/$buildId.verify'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const apiUploadRouteRoute = apiUploadRouteRouteImport.update({
-  id: '/(api)/upload',
-  path: '/upload',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const apiFoldersRouteRoute = apiFoldersRouteRouteImport.update({
-  id: '/(api)/folders',
-  path: '/folders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const apiCacheRouteRoute = apiCacheRouteRouteImport.update({
@@ -40,19 +33,29 @@ const apiCacheRouteRoute = apiCacheRouteRouteImport.update({
   path: '/cache',
   getParentRoute: () => rootRouteImport,
 } as any)
-const apiUploadInitRoute = apiUploadInitRouteImport.update({
-  id: '/init',
-  path: '/init',
-  getParentRoute: () => apiUploadRouteRoute,
+const apiFoldersRouteRoute = apiFoldersRouteRouteImport.update({
+  id: '/(api)/folders',
+  path: '/folders',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const apiUploadChunkRoute = apiUploadChunkRouteImport.update({
-  id: '/chunk',
-  path: '/chunk',
-  getParentRoute: () => apiUploadRouteRoute,
+const apiUploadRouteRoute = apiUploadRouteRouteImport.update({
+  id: '/(api)/upload',
+  path: '/upload',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const apiCacheInitRoute = apiCacheInitRouteImport.update({
-  id: '/init',
-  path: '/init',
+const apiArchiveBuildsRouteRoute = apiArchiveBuildsRouteRouteImport.update({
+  id: '/(api)/archive/builds',
+  path: '/archive/builds',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const apiBinIdRoute = apiBinIdRouteImport.update({
+  id: '/(api)/bin/$id',
+  path: '/bin/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const apiCacheKeyRoute = apiCacheKeyRouteImport.update({
+  id: '/$key',
+  path: '/$key',
   getParentRoute: () => apiCacheRouteRoute,
 } as any)
 const apiCacheChunkRoute = apiCacheChunkRouteImport.update({
@@ -60,40 +63,62 @@ const apiCacheChunkRoute = apiCacheChunkRouteImport.update({
   path: '/chunk',
   getParentRoute: () => apiCacheRouteRoute,
 } as any)
-const apiCacheKeyRoute = apiCacheKeyRouteImport.update({
-  id: '/$key',
-  path: '/$key',
+const apiCacheInitRoute = apiCacheInitRouteImport.update({
+  id: '/init',
+  path: '/init',
   getParentRoute: () => apiCacheRouteRoute,
 } as any)
-const apiBinIdRoute = apiBinIdRouteImport.update({
-  id: '/(api)/bin/$id',
-  path: '/bin/$id',
-  getParentRoute: () => rootRouteImport,
+const apiUploadChunkRoute = apiUploadChunkRouteImport.update({
+  id: '/chunk',
+  path: '/chunk',
+  getParentRoute: () => apiUploadRouteRoute,
 } as any)
+const apiUploadInitRoute = apiUploadInitRouteImport.update({
+  id: '/init',
+  path: '/init',
+  getParentRoute: () => apiUploadRouteRoute,
+} as any)
+const apiArchiveBuildsBuildIdRoute = apiArchiveBuildsBuildIdRouteImport.update({
+  id: '/$buildId',
+  path: '/$buildId',
+  getParentRoute: () => apiArchiveBuildsRouteRoute,
+} as any)
+const apiArchiveBuildsBuildIdVerifyRoute =
+  apiArchiveBuildsBuildIdVerifyRouteImport.update({
+    id: '/verify',
+    path: '/verify',
+    getParentRoute: () => apiArchiveBuildsBuildIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cache': typeof apiCacheRouteRouteWithChildren
   '/folders': typeof apiFoldersRouteRoute
   '/upload': typeof apiUploadRouteRouteWithChildren
+  '/archive/builds': typeof apiArchiveBuildsRouteRouteWithChildren
   '/bin/$id': typeof apiBinIdRoute
   '/cache/$key': typeof apiCacheKeyRoute
   '/cache/chunk': typeof apiCacheChunkRoute
   '/cache/init': typeof apiCacheInitRoute
   '/upload/chunk': typeof apiUploadChunkRoute
   '/upload/init': typeof apiUploadInitRoute
+  '/archive/builds/$buildId': typeof apiArchiveBuildsBuildIdRouteWithChildren
+  '/archive/builds/$buildId/verify': typeof apiArchiveBuildsBuildIdVerifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cache': typeof apiCacheRouteRouteWithChildren
   '/folders': typeof apiFoldersRouteRoute
   '/upload': typeof apiUploadRouteRouteWithChildren
+  '/archive/builds': typeof apiArchiveBuildsRouteRouteWithChildren
   '/bin/$id': typeof apiBinIdRoute
   '/cache/$key': typeof apiCacheKeyRoute
   '/cache/chunk': typeof apiCacheChunkRoute
   '/cache/init': typeof apiCacheInitRoute
   '/upload/chunk': typeof apiUploadChunkRoute
   '/upload/init': typeof apiUploadInitRoute
+  '/archive/builds/$buildId': typeof apiArchiveBuildsBuildIdRouteWithChildren
+  '/archive/builds/$buildId/verify': typeof apiArchiveBuildsBuildIdVerifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -101,12 +126,15 @@ export interface FileRoutesById {
   '/(api)/cache': typeof apiCacheRouteRouteWithChildren
   '/(api)/folders': typeof apiFoldersRouteRoute
   '/(api)/upload': typeof apiUploadRouteRouteWithChildren
+  '/(api)/archive/builds': typeof apiArchiveBuildsRouteRouteWithChildren
   '/(api)/bin/$id': typeof apiBinIdRoute
   '/(api)/cache/$key': typeof apiCacheKeyRoute
   '/(api)/cache/chunk': typeof apiCacheChunkRoute
   '/(api)/cache/init': typeof apiCacheInitRoute
   '/(api)/upload/chunk': typeof apiUploadChunkRoute
   '/(api)/upload/init': typeof apiUploadInitRoute
+  '/(api)/archive/builds/$buildId': typeof apiArchiveBuildsBuildIdRouteWithChildren
+  '/(api)/archive/builds/$buildId/verify': typeof apiArchiveBuildsBuildIdVerifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -115,36 +143,45 @@ export interface FileRouteTypes {
     | '/cache'
     | '/folders'
     | '/upload'
+    | '/archive/builds'
     | '/bin/$id'
     | '/cache/$key'
     | '/cache/chunk'
     | '/cache/init'
     | '/upload/chunk'
     | '/upload/init'
+    | '/archive/builds/$buildId'
+    | '/archive/builds/$buildId/verify'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/cache'
     | '/folders'
     | '/upload'
+    | '/archive/builds'
     | '/bin/$id'
     | '/cache/$key'
     | '/cache/chunk'
     | '/cache/init'
     | '/upload/chunk'
     | '/upload/init'
+    | '/archive/builds/$buildId'
+    | '/archive/builds/$buildId/verify'
   id:
     | '__root__'
     | '/'
     | '/(api)/cache'
     | '/(api)/folders'
     | '/(api)/upload'
+    | '/(api)/archive/builds'
     | '/(api)/bin/$id'
     | '/(api)/cache/$key'
     | '/(api)/cache/chunk'
     | '/(api)/cache/init'
     | '/(api)/upload/chunk'
     | '/(api)/upload/init'
+    | '/(api)/archive/builds/$buildId'
+    | '/(api)/archive/builds/$buildId/verify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -152,6 +189,7 @@ export interface RootRouteChildren {
   apiCacheRouteRoute: typeof apiCacheRouteRouteWithChildren
   apiFoldersRouteRoute: typeof apiFoldersRouteRoute
   apiUploadRouteRoute: typeof apiUploadRouteRouteWithChildren
+  apiArchiveBuildsRouteRoute: typeof apiArchiveBuildsRouteRouteWithChildren
   apiBinIdRoute: typeof apiBinIdRoute
 }
 
@@ -164,11 +202,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(api)/upload': {
-      id: '/(api)/upload'
-      path: '/upload'
-      fullPath: '/upload'
-      preLoaderRoute: typeof apiUploadRouteRouteImport
+    '/(api)/cache': {
+      id: '/(api)/cache'
+      path: '/cache'
+      fullPath: '/cache'
+      preLoaderRoute: typeof apiCacheRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(api)/folders': {
@@ -178,32 +216,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof apiFoldersRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(api)/cache': {
-      id: '/(api)/cache'
-      path: '/cache'
-      fullPath: '/cache'
-      preLoaderRoute: typeof apiCacheRouteRouteImport
+    '/(api)/upload': {
+      id: '/(api)/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof apiUploadRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(api)/upload/init': {
-      id: '/(api)/upload/init'
-      path: '/init'
-      fullPath: '/upload/init'
-      preLoaderRoute: typeof apiUploadInitRouteImport
-      parentRoute: typeof apiUploadRouteRoute
+    '/(api)/archive/builds': {
+      id: '/(api)/archive/builds'
+      path: '/archive/builds'
+      fullPath: '/archive/builds'
+      preLoaderRoute: typeof apiArchiveBuildsRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/(api)/upload/chunk': {
-      id: '/(api)/upload/chunk'
-      path: '/chunk'
-      fullPath: '/upload/chunk'
-      preLoaderRoute: typeof apiUploadChunkRouteImport
-      parentRoute: typeof apiUploadRouteRoute
+    '/(api)/bin/$id': {
+      id: '/(api)/bin/$id'
+      path: '/bin/$id'
+      fullPath: '/bin/$id'
+      preLoaderRoute: typeof apiBinIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/(api)/cache/init': {
-      id: '/(api)/cache/init'
-      path: '/init'
-      fullPath: '/cache/init'
-      preLoaderRoute: typeof apiCacheInitRouteImport
+    '/(api)/cache/$key': {
+      id: '/(api)/cache/$key'
+      path: '/$key'
+      fullPath: '/cache/$key'
+      preLoaderRoute: typeof apiCacheKeyRouteImport
       parentRoute: typeof apiCacheRouteRoute
     }
     '/(api)/cache/chunk': {
@@ -213,19 +251,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof apiCacheChunkRouteImport
       parentRoute: typeof apiCacheRouteRoute
     }
-    '/(api)/cache/$key': {
-      id: '/(api)/cache/$key'
-      path: '/$key'
-      fullPath: '/cache/$key'
-      preLoaderRoute: typeof apiCacheKeyRouteImport
+    '/(api)/cache/init': {
+      id: '/(api)/cache/init'
+      path: '/init'
+      fullPath: '/cache/init'
+      preLoaderRoute: typeof apiCacheInitRouteImport
       parentRoute: typeof apiCacheRouteRoute
     }
-    '/(api)/bin/$id': {
-      id: '/(api)/bin/$id'
-      path: '/bin/$id'
-      fullPath: '/bin/$id'
-      preLoaderRoute: typeof apiBinIdRouteImport
-      parentRoute: typeof rootRouteImport
+    '/(api)/upload/chunk': {
+      id: '/(api)/upload/chunk'
+      path: '/chunk'
+      fullPath: '/upload/chunk'
+      preLoaderRoute: typeof apiUploadChunkRouteImport
+      parentRoute: typeof apiUploadRouteRoute
+    }
+    '/(api)/upload/init': {
+      id: '/(api)/upload/init'
+      path: '/init'
+      fullPath: '/upload/init'
+      preLoaderRoute: typeof apiUploadInitRouteImport
+      parentRoute: typeof apiUploadRouteRoute
+    }
+    '/(api)/archive/builds/$buildId': {
+      id: '/(api)/archive/builds/$buildId'
+      path: '/$buildId'
+      fullPath: '/archive/builds/$buildId'
+      preLoaderRoute: typeof apiArchiveBuildsBuildIdRouteImport
+      parentRoute: typeof apiArchiveBuildsRouteRoute
+    }
+    '/(api)/archive/builds/$buildId/verify': {
+      id: '/(api)/archive/builds/$buildId/verify'
+      path: '/verify'
+      fullPath: '/archive/builds/$buildId/verify'
+      preLoaderRoute: typeof apiArchiveBuildsBuildIdVerifyRouteImport
+      parentRoute: typeof apiArchiveBuildsBuildIdRoute
     }
   }
 }
@@ -260,11 +319,39 @@ const apiUploadRouteRouteWithChildren = apiUploadRouteRoute._addFileChildren(
   apiUploadRouteRouteChildren,
 )
 
+interface apiArchiveBuildsBuildIdRouteChildren {
+  apiArchiveBuildsBuildIdVerifyRoute: typeof apiArchiveBuildsBuildIdVerifyRoute
+}
+
+const apiArchiveBuildsBuildIdRouteChildren: apiArchiveBuildsBuildIdRouteChildren =
+  {
+    apiArchiveBuildsBuildIdVerifyRoute: apiArchiveBuildsBuildIdVerifyRoute,
+  }
+
+const apiArchiveBuildsBuildIdRouteWithChildren =
+  apiArchiveBuildsBuildIdRoute._addFileChildren(
+    apiArchiveBuildsBuildIdRouteChildren,
+  )
+
+interface apiArchiveBuildsRouteRouteChildren {
+  apiArchiveBuildsBuildIdRoute: typeof apiArchiveBuildsBuildIdRouteWithChildren
+}
+
+const apiArchiveBuildsRouteRouteChildren: apiArchiveBuildsRouteRouteChildren = {
+  apiArchiveBuildsBuildIdRoute: apiArchiveBuildsBuildIdRouteWithChildren,
+}
+
+const apiArchiveBuildsRouteRouteWithChildren =
+  apiArchiveBuildsRouteRoute._addFileChildren(
+    apiArchiveBuildsRouteRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   apiCacheRouteRoute: apiCacheRouteRouteWithChildren,
   apiFoldersRouteRoute: apiFoldersRouteRoute,
   apiUploadRouteRoute: apiUploadRouteRouteWithChildren,
+  apiArchiveBuildsRouteRoute: apiArchiveBuildsRouteRouteWithChildren,
   apiBinIdRoute: apiBinIdRoute,
 }
 export const routeTree = rootRouteImport
