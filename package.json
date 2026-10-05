@@ -4,6 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev --port 3000",
+		"test:archive": "node --test tests/archive-verification.test.mjs",
 		"build": "vite build",
 		"serve": "vite preview",
 		"migrate:local": "wrangler d1 migrations apply nyanpasu-file-list --local",

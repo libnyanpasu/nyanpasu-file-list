@@ -341,13 +341,14 @@ export const verifyArchiveBuild = async (buildId: string) => {
   try {
     metadataResponse = await fetch(
       `https://archive.org/metadata/${encodeURIComponent(current.itemIdentifier)}`,
-      { signal: AbortSignal.timeout(8_000), redirect: "error" },
+      { signal: AbortSignal.timeout(8_000), redirect: "manual" },
     );
   } catch (error) {
     await setPendingDiagnostics(buildId, [error instanceof Error ? error.message : String(error)]);
     return responseForBuild(buildId);
   }
   if (!metadataResponse.ok) {
+    await metadataResponse.body?.cancel();
     await setPendingDiagnostics(buildId, [`IA metadata returned HTTP ${metadataResponse.status}`]);
     return responseForBuild(buildId);
   }
