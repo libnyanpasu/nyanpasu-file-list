@@ -167,7 +167,8 @@ export const checkIaMetadata = (
 const allowedDownloadHost = (host: string) =>
   host === "archive.org" ||
   host === "www.archive.org" ||
-  /^ia\d+\.us\.archive\.org$/i.test(host);
+  /^ia\d+\.us\.archive\.org$/i.test(host) ||
+  /^dn\d+\.ca\.archive\.org$/i.test(host);
 
 const followIaHead = async (
   initialUrl: string,

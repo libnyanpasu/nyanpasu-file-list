@@ -45,88 +45,127 @@ const bundle = await build({
   },
 });
 
-for (const redirect of [false, true]) {
-  test(
-    redirect
-      ? "metadata redirects stay pending without following the destination"
-      : "indexed IA bytes become ready in the Worker runtime",
-    async () => {
-      const requests = [];
-      const runtime = new Miniflare(
-        convertV4MiniflareOptions({
-          modules: true,
-          script: bundle.outputFiles[0].text,
-          compatibilityDate: "2025-09-02",
-          compatibilityFlags: ["nodejs_compat"],
-          bindings: { IA_ITEM_PREFIX: "test", IA_UPLOADER: "test@example.com" },
-          d1Databases: ["D1"],
-          outboundService: async (request) => {
-            requests.push(request.url);
-            if (request.url === "https://archive.org/metadata/test-item") {
-              if (redirect)
-                return new Response(null, {
-                  status: 302,
-                  headers: { location: "https://unexpected.example/metadata" },
-                });
-              return Response.json({
-                metadata: {
-                  identifier: "test-item",
-                  uploader: "test@example.com",
-                },
-                files: [
-                  { name: artifact.fileName, size: "3", md5: artifact.md5 },
-                ],
+const cases = [
+  { name: "indexed IA bytes become ready in the Worker runtime", ready: true },
+  { name: "metadata redirects are not followed", metadataRedirect: true },
+  {
+    name: "IA Canada download nodes become ready",
+    ready: true,
+    download: "https://dn711508.ca.archive.org/0/items/test-item/installer.zip",
+  },
+  {
+    name: "legacy IA US download nodes remain supported",
+    ready: true,
+    download: "https://ia800100.us.archive.org/0/items/test-item/installer.zip",
+  },
+  {
+    name: "external download destinations are not requested",
+    download: "https://unexpected.example/installer.zip",
+  },
+  {
+    name: "lookalike IA domains are not requested",
+    download:
+      "https://dn711508.ca.archive.org.unexpected.example/installer.zip",
+  },
+  {
+    name: "insecure IA download destinations are not requested",
+    download: "http://dn711508.ca.archive.org/0/items/test-item/installer.zip",
+  },
+];
+
+for (const scenario of cases) {
+  test(scenario.name, async () => {
+    const requests = [];
+    const runtime = new Miniflare(
+      convertV4MiniflareOptions({
+        modules: true,
+        script: bundle.outputFiles[0].text,
+        compatibilityDate: "2025-09-02",
+        compatibilityFlags: ["nodejs_compat"],
+        bindings: { IA_ITEM_PREFIX: "test", IA_UPLOADER: "test@example.com" },
+        d1Databases: ["D1"],
+        outboundService: async (request) => {
+          requests.push(request.url);
+          if (request.url === "https://archive.org/metadata/test-item") {
+            if (scenario.metadataRedirect)
+              return new Response(null, {
+                status: 302,
+                headers: { location: "https://unexpected.example/metadata" },
               });
-            }
-            assert.equal(
-              request.url,
-              "https://archive.org/download/test-item/installer.zip",
-            );
-            assert.equal(request.method, "HEAD");
-            return new Response(null, {
-              headers: {
-                "content-type": "application/zip",
-                "content-length": "3",
+            return Response.json({
+              metadata: {
+                identifier: "test-item",
+                uploader: "test@example.com",
               },
+              files: [
+                { name: artifact.fileName, size: "3", md5: artifact.md5 },
+              ],
             });
-          },
-        }),
-      );
-      try {
-        const db = await runtime.getD1Database("D1");
-        for (const migration of [
-          "0001_create_files_table.sql",
-          "0002_create_folders_table.sql",
-          "0003_add_archive_storage.sql",
-        ]) {
-          const sql = await readFile(
-            new URL(`../migrations/${migration}`, import.meta.url),
-            "utf8",
-          );
-          await db.exec(sql.replace(/^--.*$/gm, "").replaceAll("\n", " "));
-        }
-        const response = await runtime.dispatchFetch(
-          "https://worker.test/verify",
-          {
-            method: "POST",
-            body: JSON.stringify(input),
-          },
+          }
+          const originalUrl =
+            "https://archive.org/download/test-item/installer.zip";
+          if (request.url === originalUrl && scenario.download) {
+            return new Response(null, {
+              status: 302,
+              headers: { location: scenario.download },
+            });
+          }
+          assert.equal(request.url, scenario.download ?? originalUrl);
+          assert.equal(request.method, "HEAD");
+          return new Response(null, {
+            headers: {
+              "content-type": "application/zip",
+              "content-length": "3",
+            },
+          });
+        },
+      }),
+    );
+    try {
+      const db = await runtime.getD1Database("D1");
+      for (const migration of [
+        "0001_create_files_table.sql",
+        "0002_create_folders_table.sql",
+        "0003_add_archive_storage.sql",
+      ]) {
+        const sql = await readFile(
+          new URL(`../migrations/${migration}`, import.meta.url),
+          "utf8",
         );
-        assert.equal(response.status, 200);
-        const result = await response.json();
-        assert.equal(result.status, redirect ? "pending" : "ready");
-        assert.deepEqual(
-          result.diagnostics,
-          redirect ? ["IA metadata returned HTTP 302"] : [],
-        );
-        assert.equal(requests.length, redirect ? 1 : 2);
-        const visible = await db
-          .prepare("SELECT COUNT(*) AS count FROM files WHERE status = 'ready'")
-          .first();
-        assert.equal(visible.count, redirect ? 0 : 1);
-      } finally {
-        await runtime.dispose();
+        await db.exec(sql.replace(/^--.*$/gm, "").replaceAll("\n", " "));
       }
-    },
-  );
+      const response = await runtime.dispatchFetch(
+        "https://worker.test/verify",
+        {
+          method: "POST",
+          body: JSON.stringify(input),
+        },
+      );
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.equal(result.status, scenario.ready ? "ready" : "pending");
+      assert.deepEqual(
+        result.diagnostics,
+        scenario.metadataRedirect
+          ? ["IA metadata returned HTTP 302"]
+          : scenario.ready
+            ? []
+            : ["installer.zip: IA download redirected to a non-IA host"],
+      );
+      assert.equal(
+        requests.length,
+        scenario.metadataRedirect
+          ? 1
+          : scenario.ready && scenario.download
+            ? 3
+            : 2,
+      );
+      const visible = await db
+        .prepare("SELECT COUNT(*) AS count FROM files WHERE status = 'ready'")
+        .first();
+      assert.equal(visible.count, scenario.ready ? 1 : 0);
+    } finally {
+      await runtime.dispose();
+    }
+  });
 }
