@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { TelegramBuildInputSchema } from "@/lib/telegram";
+import { registerTelegramBuild } from "@/services/telegram-index";
 import { ArchiveBuildInputSchema } from "@/lib/archive";
 import { formatError } from "@/utils/fmt";
 import { requireUploadAuthorization } from "@/utils/upload-auth";
@@ -15,7 +17,9 @@ export const Route = createFileRoute("/(api)/archive/builds")({
         if (authError) return authError;
 
         const body = await request.json().catch(() => null);
-        const parsed = ArchiveBuildInputSchema.safeParse(body);
+        const parsed = typeof body === "object" && body !== null && "storageProvider" in body && body.storageProvider === "telegram"
+          ? TelegramBuildInputSchema.safeParse(body)
+          : ArchiveBuildInputSchema.safeParse(body);
         if (!parsed.success) {
           return Response.json(
             { error: "Invalid build manifest", detail: parsed.error.message },
@@ -24,7 +28,9 @@ export const Route = createFileRoute("/(api)/archive/builds")({
         }
 
         try {
-          const build = await registerArchiveBuild(parsed.data);
+          const build = parsed.data.schemaVersion === 2
+            ? await registerTelegramBuild(parsed.data)
+            : await registerArchiveBuild(parsed.data);
           return Response.json(build, { status: 200 });
         } catch (error) {
           if (error instanceof ArchiveConflictError) {

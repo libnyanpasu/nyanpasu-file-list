@@ -127,6 +127,7 @@ for (const scenario of cases) {
         "0001_create_files_table.sql",
         "0002_create_folders_table.sql",
         "0003_add_archive_storage.sql",
+        "0004_add_telegram_storage.sql",
       ]) {
         const sql = await readFile(
           new URL(`../migrations/${migration}`, import.meta.url),

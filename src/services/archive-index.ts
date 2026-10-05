@@ -30,6 +30,7 @@ interface ArchiveBuildRow {
 }
 
 interface ArchiveFileRow {
+  storage_provider: "onedrive" | "ia" | "telegram";
   id: string;
   file_name: string;
   file_size: number;
@@ -82,7 +83,7 @@ const responseForBuild = async (buildId: string) => {
 
   const files = await kysely
     .selectFrom("files")
-    .select(["id", "file_name", "file_size", "storage_key", "status", "sha256", "md5"])
+    .select(["id", "file_name", "file_size", "storage_provider", "storage_key", "status", "sha256", "md5"])
     .where("build_id", "=", buildId)
     .orderBy("file_name", "asc")
     .execute() as ArchiveFileRow[];
@@ -94,10 +95,12 @@ const responseForBuild = async (buildId: string) => {
     diagnostics = ["Stored diagnostics could not be decoded"];
   }
 
+  const telegram = files[0]?.storage_provider === "telegram";
   return {
     buildId: build.build_id,
-    itemIdentifier: build.item_identifier,
-    schemaVersion: 1 as const,
+    itemIdentifier: telegram ? "ClashNyanpasu" : build.item_identifier,
+    schemaVersion: telegram ? 2 as const : 1 as const,
+    ...(telegram ? { storageProvider: "telegram" as const } : {}),
     target: build.target,
     channel: build.channel,
     commit: build.commit_sha,
@@ -222,7 +225,7 @@ export const registerArchiveBuild = async (build: ArchiveBuildInput) => {
   return responseForBuild(build.buildId);
 };
 
-const planArchiveFolderPath = async (path: string): Promise<{ folderId: string; folderStatements: D1PreparedStatement[] }> => {
+export const planArchiveFolderPath = async (path: string): Promise<{ folderId: string; folderStatements: D1PreparedStatement[] }> => {
   const segments = path.split("/");
   let parentId: string | null = null;
   const accumulated: string[] = [];

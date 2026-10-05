@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { kysely } from "@/lib/kysely";
 import { getFile } from "@/services/onedrive";
+import { telegramMessageUrl } from "@/lib/telegram";
 import { iaPublicDownloadUrl } from "@/lib/archive";
 
 export const Route = createFileRoute("/(api)/bin/$id")({
@@ -20,6 +21,13 @@ export const Route = createFileRoute("/(api)/bin/$id")({
             `[bin] file not found in DB or is hidden: id=${params.id}`,
           );
           return Response.json({ error: "Not found" }, { status: 404 });
+        }
+
+        if (file.storage_provider === "telegram") {
+          if (file.storage_item !== "ClashNyanpasu" || !file.storage_key || !/^[1-9][0-9]*$/.test(file.storage_key)) {
+            return Response.json({ error: "Telegram location unavailable" }, { status: 503 });
+          }
+          return Response.redirect(telegramMessageUrl(Number(file.storage_key)), 302);
         }
 
         if (file.storage_provider === "ia") {

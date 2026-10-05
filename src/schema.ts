@@ -8,7 +8,7 @@ export const FilesSchema = z.object({
   mime_type: z.string().nullable(),
   hidden: z.number().default(0),
   folder_id: z.string().nullable().default(null),
-  storage_provider: z.enum(["onedrive", "ia"]).default("onedrive"),
+  storage_provider: z.enum(["onedrive", "ia", "telegram"]).default("onedrive"),
   storage_item: z.string().nullable().default(null),
   storage_key: z.string().nullable().default(null),
   build_id: z.string().nullable().default(null),
@@ -28,7 +28,7 @@ export interface FilesTable {
   mime_type: string | null;
   hidden: Generated<number>;
   folder_id: string | null;
-  storage_provider: Generated<"onedrive" | "ia">;
+  storage_provider: Generated<"onedrive" | "ia" | "telegram">;
   storage_item: string | null;
   storage_key: string | null;
   build_id: string | null;

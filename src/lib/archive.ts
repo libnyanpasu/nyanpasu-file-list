@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const artifactSchema = z.object({
+export const artifactSchema = z.object({
   fileName: z
     .string()
     .min(1)
