@@ -31,7 +31,7 @@ importers:
         version: 2.1.1
       filesize:
         specifier: ^11.0.25
-        version: 11.0.25
+        version: 11.0.35
       kysely:
         specifier: ^0.29.6
         version: 0.29.6
@@ -1368,8 +1368,8 @@ packages:
   fetchdts@0.1.7:
     resolution: {integrity: sha512-YoZjBdafyLIop9lSxXVI33oLD5kN31q4Td+CasofLLYeLXRFeOsuOw0Uo+XNRi9PZlbfdlN2GmRtm4tCEQ9/KA==}
 
-  filesize@11.0.25:
-    resolution: {integrity: sha512-oPVK4S+B5nRK8eL5FORi4RSzbz/1PmUx17NQLMIWv8tlNVDUFgLY0GNApL7tEebL4WgkBqSJGB3AJsCXUs01hw==}
+  filesize@11.0.35:
+    resolution: {integrity: sha512-nYIrQN/m4a0VYYoUeENvFf8mCDaB9PNbKETinw4DRdBcX5yB2nY3YtFz9iMfg/YDQWyYPOn/THVtsqLN/IH0Ag==}
     engines: {node: '>= 10.8.0'}
 
   fsevents@2.3.3:
@@ -3072,7 +3072,7 @@ snapshots:
 
   fetchdts@0.1.7: {}
 
-  filesize@11.0.25: {}
+  filesize@11.0.35: {}
 
   fsevents@2.3.3:
     optional: true
